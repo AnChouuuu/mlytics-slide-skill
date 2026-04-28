@@ -13,14 +13,34 @@
 
 ## 第一步：安裝（只需做一次）
 
-### 1. 打開終端機（Terminal）
+有兩種安裝方式，選一種即可：
+
+---
+
+### 方式 A：用 Claude Desktop App 安裝（最簡單）
+
+1. 打開 **Claude Desktop App**
+2. 點選左上角切換到 **Code** 模式
+3. 在對話框貼上以下訊息，按 Enter：
+
+```
+請幫我安裝這個 Skill：https://github.com/AnChouuuu/mlytics-slide-skill
+```
+
+4. Claude 會自動完成所有安裝步驟，看到 `✅ Mlytics Slide Brand Skill 安裝完成！` 就代表成功。
+
+---
+
+### 方式 B：手動安裝（終端機）
+
+**1. 打開終端機（Terminal）**
 
 - Mac：按 `Command + 空白鍵`，搜尋「Terminal」，按 Enter
 
-### 2. 貼上以下兩行指令，按 Enter 執行
+**2. 貼上以下兩行指令，按 Enter 執行**
 
 ```bash
-git clone https://github.com/<your-org>/mlytics-slide-brand.git \
+git clone https://github.com/AnChouuuu/mlytics-slide-skill.git \
   ~/.claude/skills/mlytics-slide-brand
 ```
 
@@ -29,18 +49,6 @@ cd ~/.claude/skills/mlytics-slide-brand && npm run install-skill
 ```
 
 > 看到 `✅ Mlytics Slide Brand Skill 安裝完成！` 就代表安裝成功。
-
-### 3. 確認安裝成功
-
-```bash
-ls ~/.claude/skills/mlytics-slide-brand/templates/
-```
-
-看到這些檔案名稱就代表成功：
-
-```
-base.mjs  slide-cover.mjs  slide-toc.mjs  slide-section.mjs ...
-```
 
 ---
 
