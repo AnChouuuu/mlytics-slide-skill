@@ -24,7 +24,7 @@
 3. 在對話框貼上以下訊息，按 Enter：
 
 ```
-請幫我安裝這個 Skill：https://github.com/AnChouuuu/mlytics-slide-skill
+請幫我安裝這個 Skill：https://github.com/mlytics/mlytics-ai-skills-internal
 ```
 
 4. Claude 會自動完成所有安裝步驟，看到 `✅ Mlytics Slide Brand Skill 安裝完成！` 就代表成功。
@@ -40,7 +40,9 @@
 **2. 貼上以下兩行指令，按 Enter 執行**
 
 ```bash
-git clone https://github.com/AnChouuuu/mlytics-slide-skill.git \
+git clone https://github.com/mlytics/mlytics-ai-skills-internal.git \
+  ~/Documents/mlytics-ai-skills-internal && \
+  cp -r ~/Documents/mlytics-ai-skills-internal/.claude/skills/mlytics-slide-brand \
   ~/.claude/skills/mlytics-slide-brand
 ```
 
