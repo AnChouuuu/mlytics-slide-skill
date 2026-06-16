@@ -2,3 +2,5 @@ node_modules/
 package-lock.json
 *.pptx
 .DS_Store
+# Extracted font files (auto-generated on first run, not committed due to licensing)
+font-cache/

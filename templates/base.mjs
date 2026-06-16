@@ -6,8 +6,11 @@
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { dirname, join } from 'path';
 import PptxGenJS from 'pptxgenjs';
+
+const require = createRequire(import.meta.url);
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = join(__dir, '..');
@@ -82,4 +85,120 @@ export function createPptx() {
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_16x9'; // 10" × 5.625"
   return pptx;
+}
+
+// ── Font measurement (opentype.js) ───────────────────────────────
+// Text box inset: pptxgenjs adds ~0.1" per side horizontally
+const TEXT_BOX_INSET = 0.1; // inches, per side
+
+const FONT_CACHE_DIR = join(SKILL_DIR, 'font-cache');
+
+// Avenir variants to extract from the system .ttc (macOS only)
+// index → output filename
+const AVENIR_EXTRACT = {
+  4:  'AvenirHeavy.ttf',   // bold — used when fontFace:'Avenir', bold:true
+  11: 'AvenirRoman.ttf',   // regular — used when fontFace:'Avenir', bold:false
+};
+
+/**
+ * Ensure Avenir .ttf files exist in font-cache/.
+ * Extracts from /System/Library/Fonts/Avenir.ttc via Python fonttools.
+ * No-ops silently if fonttools is unavailable or not on macOS.
+ */
+function _ensureAvenirCache() {
+  const needed = Object.entries(AVENIR_EXTRACT).filter(
+    ([, name]) => !existsSync(join(FONT_CACHE_DIR, name))
+  );
+  if (needed.length === 0) return;
+  const ttcPath = '/System/Library/Fonts/Avenir.ttc';
+  if (!existsSync(ttcPath)) return;
+  try {
+    execSync(`mkdir -p "${FONT_CACHE_DIR}"`, { stdio: 'ignore' });
+    const script = needed.map(([idx, name]) =>
+      `ttc.fonts[${idx}].save('${join(FONT_CACHE_DIR, name)}')`
+    ).join('\n');
+    execSync(
+      `python3 -c "from fontTools.ttLib import TTCollection; ttc = TTCollection('${ttcPath}'); ${script}"`,
+      { stdio: 'ignore' }
+    );
+  } catch { /* fonttools unavailable — fall back to char estimation */ }
+}
+
+// Extract on module load (fast no-op if files already exist)
+_ensureAvenirCache();
+
+// Font file map: [fontFace, bold] → absolute path
+const FONT_PATHS = {
+  'Verdana:bold':   '/System/Library/Fonts/Supplemental/Verdana Bold.ttf',
+  'Verdana:normal': '/System/Library/Fonts/Supplemental/Verdana.ttf',
+  'Avenir:bold':    join(FONT_CACHE_DIR, 'AvenirHeavy.ttf'),
+  'Avenir:normal':  join(FONT_CACHE_DIR, 'AvenirRoman.ttf'),
+};
+
+const _fontCache = {};
+
+function _loadFont(fontFace, bold) {
+  const key = `${fontFace}:${bold ? 'bold' : 'normal'}`;
+  if (_fontCache[key]) return _fontCache[key];
+  const path = FONT_PATHS[key];
+  if (!path || !existsSync(path)) return null;
+  try {
+    const ot = require(join(SKILL_DIR, 'node_modules', 'opentype.js'));
+    _fontCache[key] = ot.loadSync(path);
+    return _fontCache[key];
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * measureTextWidth(text, fontFace, bold, pt) → width in inches (raw glyph advance)
+ * Returns null if the font cannot be loaded (caller should fall back).
+ */
+export function measureTextWidth(text, fontFace, bold, pt) {
+  const font = _loadFont(fontFace, bold);
+  if (!font) return null;
+  return font.getAdvanceWidth(text, pt) / 72;
+}
+
+/**
+ * measureLineCount(text, fontFace, bold, pt, boxW) → number of lines
+ *
+ * boxW: total text box width in inches (including insets).
+ * Handles explicit \n line breaks.
+ * Falls back to char-unit estimation if font unavailable.
+ */
+export function measureLineCount(text, fontFace, bold, pt, boxW) {
+  const effectiveW = boxW - 2 * TEXT_BOX_INSET;
+  const font = _loadFont(fontFace, bold);
+
+  let totalLines = 0;
+
+  for (const seg of text.split('\n')) {
+    if (font) {
+      // Accurate: measure each word, greedy line-break
+      const words = seg.split(/(?<=\s)|(?=[\u4E00-\u9FFF\u3000-\u303F])/);
+      let lineW = 0;
+      let lineCount = 1;
+      for (const w of words) {
+        const ww = font.getAdvanceWidth(w, pt) / 72;
+        if (lineW + ww > effectiveW && lineW > 0) {
+          lineCount++;
+          lineW = ww;
+        } else {
+          lineW += ww;
+        }
+      }
+      totalLines += lineCount;
+    } else {
+      // Fallback: char-unit estimation
+      const CJK_EM = 0.95, LATIN_W = 0.55;
+      const upl = (effectiveW * 72) / (pt * CJK_EM);
+      let u = 0;
+      for (const ch of seg) u += ch.charCodeAt(0) > 127 ? 1.0 : LATIN_W;
+      totalLines += Math.max(1, Math.ceil(u / upl));
+    }
+  }
+
+  return Math.max(1, totalLines);
 }

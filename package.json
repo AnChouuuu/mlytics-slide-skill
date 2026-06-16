@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "description": "Mlytics branded slide deck templates for Claude Code skill (pptxgenjs)",
   "type": "commonjs",
-  "keywords": ["mlytics", "pptx", "slide", "claude-skill"],
+  "keywords": [
+    "mlytics",
+    "pptx",
+    "slide",
+    "claude-skill"
+  ],
   "license": "UNLICENSED",
   "scripts": {
     "install-skill": "npm install && echo '✅ Mlytics Slide Brand Skill 安裝完成！請閱讀 USAGE.md 開始使用。'"
   },
   "dependencies": {
+    "opentype.js": "^1.3.4",
     "pptxgenjs": "^4.0.1"
   }
 }

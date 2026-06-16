@@ -18,41 +18,15 @@
  *   })
  */
 
-import { C, F } from './base.mjs';
+import { C, F, measureLineCount } from './base.mjs';
 
 // ── Dynamic layout helpers ─────────────────────────────────────────────────
 
 const PT_TO_IN = 1 / 72;
 
 /**
- * Count how many render lines a string needs at a given font size inside boxW inches.
- * Handles explicit \n line breaks.
- *
- * Calibration notes (Verdana Bold, measured empirically):
- *   - Verdana Bold is an exceptionally wide font (~0.8 em average advance for Latin)
- *   - CJK full-width chars ≈ 0.95 em advance
- *   - Text boxes have ~0.08" internal inset per side → efficiency factor 0.92
- *   - Combined: unitsPerLine = (boxW × 72 × 0.92) / (pt × 0.95)
- *     Latin char = 0.8 units, CJK char = 1.0 units
- */
-function measureLines(text, pt, boxW) {
-  const EFFICIENCY   = 0.92; // text-box inset + render safety margin
-  const CJK_EM       = 0.95; // CJK advance ≈ 0.95 em in Verdana
-  const unitsPerLine = (boxW * 72 * EFFICIENCY) / (pt * CJK_EM);
-
-  let totalLines = 0;
-  for (const segment of text.split('\n')) {
-    let units = 0;
-    for (const ch of segment) {
-      units += ch.charCodeAt(0) > 127 ? 1.0 : 0.8; // Verdana Bold Latin ≈ 0.8 em
-    }
-    totalLines += Math.max(1, Math.ceil(units / unitsPerLine));
-  }
-  return totalLines;
-}
-
-/**
  * Calculate title block height and derived Y positions.
+ * Uses opentype.js accurate measurement (falls back to char-unit estimation).
  * Returns { titleBoxH, reporterY }
  */
 function calcLayout(topicLabel, mainTitle, titleY, titleW) {
@@ -62,8 +36,8 @@ function calcLayout(topicLabel, mainTitle, titleY, titleW) {
   const PARA_GAP     = 0.06; // gap between the two paragraphs (inches)
   const REPORTER_GAP = 0.22; // gap between title box bottom and reporter row
 
-  const topicLines = measureLines(topicLabel, TOPIC_PT, titleW);
-  const titleLines = measureLines(mainTitle,  TITLE_PT, titleW);
+  const topicLines = measureLineCount(topicLabel, F.title, false, TOPIC_PT, titleW);
+  const titleLines = measureLineCount(mainTitle,  F.title, true,  TITLE_PT, titleW);
 
   const topicH    = topicLines * TOPIC_PT * LINE_SPACING * PT_TO_IN;
   const titleH    = titleLines * TITLE_PT * LINE_SPACING * PT_TO_IN;
@@ -108,6 +82,7 @@ export function addCoverSlide(pptx, LOGO, { topicLabel, mainTitle, reporter, dat
   // ── Dynamic layout calculation ──
   const TITLE_X = 0.5427;
   const TITLE_Y = 1.7349;
+  // Right color block starts at x=6.6185; keep text right edge ≤ 6.35" (0.27" gap)
   const TITLE_W = 5.8;
   const BAR_X   = 0.4203;
   const BAR_W   = 0.0994;

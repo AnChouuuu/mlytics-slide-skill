@@ -23,6 +23,7 @@ export function addContentSplitSlide(pptx, {
   sectionLabel = '',
   subTitle = '',
   bullets = [],
+  image = null,          // optional base64 data URL — replaces grey placeholder
   imagePlaceholder = true,
 }) {
   const s = pptx.addSlide();
@@ -54,8 +55,15 @@ export function addContentSplitSlide(pptx, {
   });
 
   // ── Left image area ──
-  // x=0.4784 y=1.6041 w=4.5855 h=3.5206
-  if (imagePlaceholder) {
+  // Box: x=0.4784 y=1.6041 w=4.5855 h=3.5206
+  if (image) {
+    // Fit image at 16:9 (slide screenshots) into the box without distortion.
+    // Fit by width, then vertically center within the box.
+    const BOX_X = 0.4784, BOX_Y = 1.6041, BOX_W = 4.5855, BOX_H = 3.5206;
+    const imgH = BOX_W / (16 / 9);            // ≈ 2.579"
+    const imgY = BOX_Y + (BOX_H - imgH) / 2; // vertically centered
+    s.addImage({ data: image, x: BOX_X, y: imgY, w: BOX_W, h: imgH });
+  } else if (imagePlaceholder) {
     s.addShape(pptx.ShapeType.rect, {
       x: 0.4784, y: 1.6041, w: 4.5855, h: 3.5206,
       fill: { color: C.cardBg }, line: { color: C.divider, width: 1 },
